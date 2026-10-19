@@ -1,0 +1,106 @@
+Write-Host "`n=== COMPUTER DETAILS FOR eTIMS ===" -ForegroundColor Green
+
+Write-Host "`n--- Computer Name ---"
+$env:COMPUTERNAME
+
+Write-Host "`n--- Manufacturer and Model ---"
+Get-CimInstance Win32_ComputerSystem |
+    Select-Object Manufacturer, Model
+
+Write-Host "`n--- Serial Number ---"
+Get-CimInstance Win32_BIOS |
+    Select-Object SerialNumber
+
+Write-Host "`n--- Windows Version ---"
+Get-CimInstance Win32_OperatingSystem |
+    Select-Object Caption, Version, OSArchitecture
+
+Write-Host "`n--- RAM ---"
+Get-CimInstance Win32_ComputerSystem |
+    ForEach-Object { "{0:N2} GB" -f ($_.TotalPhysicalMemory / 1GB) }
+
+Write-Host "`n--- Processor ---"
+Get-CimInstance Win32_Processor |
+    Select-Object -First 1 -ExpandProperty Name
+
+Write-Host "`n--- Disk Space (C:) ---"
+Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'" |
+    Select-Object DeviceID,
+        @{Name='TotalGB';Expression={[math]::Round($_.Size/1GB,2)}},
+        @{Name='FreeGB';Expression={[math]::Round($_.FreeSpace/1GB,2)}}
+
+Write-Host "`n=== END ===" -ForegroundColor Green
+
+
+
+
+
+
+
+
+
+FIREWALL RULES "
+$InstallationDir = 'C:\eTIMS-Paypoint-Win'
+
+$Rules = @(
+    @{
+        Name = 'Codex-eTIMS-Research-Block-Client'
+        Program = Join-Path $InstallationDir 'bin\EBM2x.WPF.exe'
+    },
+    @{
+        Name = 'Codex-eTIMS-Research-Block-Launcher'
+        Program = Join-Path $InstallationDir 'EBM2xLauncher.exe'
+    }
+)
+
+foreach ($Rule in $Rules) {
+    if (-not (Test-Path -LiteralPath $Rule.Program -PathType Leaf)) {
+        throw "eTIMS executable not found: $($Rule.Program)"
+    }
+
+    $Existing = Get-NetFirewallRule -Name $Rule.Name `
+        -ErrorAction SilentlyContinue
+
+    if ($Existing) {
+        Write-Host "Rule already exists: $($Rule.Name)" `
+            -ForegroundColor Yellow
+        continue
+    }
+
+    New-NetFirewallRule `
+        -Name $Rule.Name `
+        -DisplayName $Rule.Name `
+        -Enabled True `
+        -Direction Outbound `
+        -Action Block `
+        -Profile Any `
+        -Program $Rule.Program `
+        -Protocol Any `
+        -PolicyStore PersistentStore
+
+    Write-Host "Created: $($Rule.Name)" -ForegroundColor Green
+}
+
+Write-Host "`n=== VERIFY RULES ===" -ForegroundColor Cyan
+
+Get-NetFirewallRule `
+    -Name 'Codex-eTIMS-Research-Block-Client',
+          'Codex-eTIMS-Research-Block-Launcher' |
+    Format-Table Name, Enabled, Direction, Action, Profile
+"
+
+
+
+REMOVING THE RULES "
+Remove-NetFirewallRule -Name 'Codex-eTIMS-Research-Block-Client'
+Remove-NetFirewallRule -Name 'Codex-eTIMS-Research-Block-Launcher'
+
+Write-Host "Both eTIMS firewall rules removed successfully." -ForegroundColor Green
+
+"
+
+
+
+
+
+%LOCALAPPDATA%\OraforgePOS\etims
