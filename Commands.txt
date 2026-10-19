@@ -104,3 +104,15 @@ Write-Host "Both eTIMS firewall rules removed successfully." -ForegroundColor Gr
 
 
 %LOCALAPPDATA%\OraforgePOS\etims
+
+
+
+
+
+
+
+
+
+
+
+Remove-Item -Path "$env:LOCALAPPDATA\OraforgePOS\etims\config.json" -Force -ErrorAction SilentlyContinue
