@@ -116,3 +116,48 @@ Write-Host "Both eTIMS firewall rules removed successfully." -ForegroundColor Gr
 
 
 Remove-Item -Path "$env:LOCALAPPDATA\OraforgePOS\etims\config.json" -Force -ErrorAction SilentlyContinue
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 1. Ensure Windows Firewall service is running and enabled
+Start-Service mpssvc -ErrorAction SilentlyContinue
+Set-Service mpssvc -StartupType Automatic -ErrorAction SilentlyContinue
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+
+# 2. Make sure EBM2xLauncher.exe is present in C:\eTIMS-Paypoint-Win
+if (-not (Test-Path "C:\eTIMS-Paypoint-Win\EBM2xLauncher.exe")) {
+    Copy-Item "C:\eTIMS-Paypoint-Win\bin\EBM2xLauncher.exe" "C:\eTIMS-Paypoint-Win\" -ErrorAction SilentlyContinue
+}
+
+# 3. Remove any old rules if they exist
+Remove-NetFirewallRule -Name "Codex-eTIMS-Research-Block-Client" -ErrorAction SilentlyContinue
+Remove-NetFirewallRule -Name "Codex-eTIMS-Research-Block-Launcher" -ErrorAction SilentlyContinue
+
+# 4. Add the two required eTIMS firewall rules
+New-NetFirewallRule -DisplayName "Codex-eTIMS-Research-Block-Client" -Name "Codex-eTIMS-Research-Block-Client" -Direction Outbound -Action Block -Program "C:\eTIMS-Paypoint-Win\bin\EBM2x.WPF.exe" -Profile Any
+
+New-NetFirewallRule -DisplayName "Codex-eTIMS-Research-Block-Launcher" -Name "Codex-eTIMS-Research-Block-Launcher" -Direction Outbound -Action Block -Program "C:\eTIMS-Paypoint-Win\EBM2xLauncher.exe" -Profile Any
